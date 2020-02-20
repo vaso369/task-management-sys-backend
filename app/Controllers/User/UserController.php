@@ -3,8 +3,8 @@ namespace App\Controllers\User;
 
 use App\Config\DB;
 use App\Models\User\User;
-
-//use \Firebase\JWT\JWT;
+use PDOException;
+use \Firebase\JWT\JWT;
 
 class UserController
 {
@@ -15,8 +15,15 @@ class UserController
     }
     public function getUser()
     {
-        $user = $this->model->getUser();
-        echo json_encode($user);
+        try {
+            $user = $this->model->getUser();
+            echo json_encode($user);
+        } catch (PDOException $ex) {
+            \http_response_code(500);
+            echo json_encode([
+                "message" => $ex->getMessage(),
+            ]);
+        }
     }
     public function register($request)
     {
@@ -65,10 +72,18 @@ class UserController
             $data = $errors;
 
         } else {
-            $user = new User(DB::instance());
-            $code = $user->insertUser("INSERT INTO users VALUES (NULL,?,?,?,?,?,2,?,?,0,4,5)", [$first_name, $last_name, $username, $email, $pass, $defaultImage, $defaultImage]);
-            http_response_code($code);
-            echo json_encode($data);
+            try {
+                $user = new User(DB::instance());
+                $code = $user->insertUser("INSERT INTO users VALUES (NULL,?,?,?,?,?,2,?,?,0,4,5)", [$first_name, $last_name, $username, $email, $pass, $defaultImage, $defaultImage]);
+                http_response_code(201);
+                echo json_encode($data);
+            } catch (PDOException $ex) {
+                http_response_code(500);
+                echo json_encode([
+                    "message" => $ex->getMessage(),
+                ]);
+            }
+
         }
     }
 
@@ -78,83 +93,79 @@ class UserController
         $code = 404;
         $username = $request['username'];
         $password = $request['pass'];
+        try {
+            $user = new User(DB::instance());
+            $employee = $user->getUser($username, $password);
+            $isBoss = $user->isBoss($employee->id);
+            $boss = $user->getBoss($employee->id);
+            $boss->code = "201";
+            $employee->code = "200";
+            if ($isBoss) {
 
-        $user = new User(DB::instance());
-        $employee = $user->getUser($username, $password);
-        $isBoss = $user->isBoss($employee->id);
-        $boss = $user->getBoss($employee->id);
-        $boss->code = "201";
-        $employee->code = "200";
-        if ($isBoss) {
+                $secret_key = "YOUR_SECRET_KEY";
+                $issuer_claim = "THE_ISSUER"; // this can be the servername
+                $audience_claim = "THE_AUDIENCE";
+                $issuedat_claim = time(); // issued at
+                $notbefore_claim = $issuedat_claim; //not before in seconds
+                $expire_claim = $issuedat_claim + 1200; // expire time in seconds
+                $token = array(
+                    "iss" => $issuer_claim,
+                    "aud" => $audience_claim,
+                    "iat" => $issuedat_claim,
+                    "nbf" => $notbefore_claim,
+                    "exp" => $expire_claim,
+                );
 
-            $secret_key = "YOUR_SECRET_KEY";
-            $issuer_claim = "THE_ISSUER"; // this can be the servername
-            $audience_claim = "THE_AUDIENCE";
-            $issuedat_claim = time(); // issued at
-            $notbefore_claim = $issuedat_claim; //not before in seconds
-            $expire_claim = $issuedat_claim + 1200; // expire time in seconds
-            $token = array(
-                "iss" => $issuer_claim,
-                "aud" => $audience_claim,
-                "iat" => $issuedat_claim,
-                "nbf" => $notbefore_claim,
-                "exp" => $expire_claim,
-            );
+                http_response_code(200);
 
-            http_response_code(200);
+                $jwt = JWT::encode($token, $secret_key);
+                echo json_encode(
+                    array(
+                        "message" => "Successful login.",
+                        "jwt" => $jwt,
+                        "expireAt" => $expire_claim,
+                        "user" => $boss,
+                    ));
 
-            $jwt = JWT::encode($token, $secret_key);
-            echo json_encode(
-                array(
-                    "message" => "Successful login.",
-                    "jwt" => $jwt,
-                    "expireAt" => $expire_claim,
-                    "user" => $boss,
-                ));
-            //     echo json_encode($boss);
+            } elseif ($employee) {
 
-        } elseif ($employee) {
+                $secret_key = "YOUR_SECRET_KEY";
+                $issuer_claim = "THE_ISSUER"; // this can be the servername
+                $audience_claim = "THE_AUDIENCE";
+                $issuedat_claim = time(); // issued at
+                $notbefore_claim = $issuedat_claim; //not before in seconds
+                $expire_claim = $issuedat_claim + 1200; // expire time in seconds
+                $token = array(
+                    "iss" => $issuer_claim,
+                    "aud" => $audience_claim,
+                    "iat" => $issuedat_claim,
+                    "nbf" => $notbefore_claim,
+                    "exp" => $expire_claim,
+                );
 
-            $secret_key = "YOUR_SECRET_KEY";
-            $issuer_claim = "THE_ISSUER"; // this can be the servername
-            $audience_claim = "THE_AUDIENCE";
-            $issuedat_claim = time(); // issued at
-            $notbefore_claim = $issuedat_claim; //not before in seconds
-            $expire_claim = $issuedat_claim + 1200; // expire time in seconds
-            $token = array(
-                "iss" => $issuer_claim,
-                "aud" => $audience_claim,
-                "iat" => $issuedat_claim,
-                "nbf" => $notbefore_claim,
-                "exp" => $expire_claim,
-            );
+                http_response_code(200);
 
-            http_response_code(200);
+                $jwt = JWT::encode($token, $secret_key);
+                echo json_encode(
+                    array(
+                        "message" => "Successful login.",
+                        "jwt" => $jwt,
+                        "expireAt" => $expire_claim,
+                        "user" => $employee,
+                    ));
 
-            $jwt = JWT::encode($token, $secret_key);
-            echo json_encode(
-                array(
-                    "message" => "Successful login.",
-                    "jwt" => $jwt,
-                    "expireAt" => $expire_claim,
-                    "user" => $employee,
-                ));
-
-        } else {
-            // $_SESSION['errors'] ="Korisnik nije registrovan!";
+            } else {
+                echo json_encode([
+                    "message" => "Nema korisnika",
+                ]);
+            }
+        } catch (PDOException $ex) {
+            http_response_code(500);
             echo json_encode([
-                "message" => "Nema korisnika",
+                "message" => $ex->getMessage(),
             ]);
         }
 
-    }
-    public function logout()
-    {
-        header("Content-type:application/json");
-        unset($_SESSION['user']);
-        echo json_encode([
-            "message" => "logged out",
-        ]);
     }
     public function editUser($request)
     {
@@ -202,17 +213,20 @@ class UserController
             $data = $errors;
 
         } else {
-            $user = new User(DB::instance());
-            $code = $user->editUser("UPDATE users SET first_name=?,last_name=?,username=?,email=?,pass=? WHERE id=?", [$first_name, $last_name, $username, $email, $pass, $idEmployee]);
-            // if($code === 200){
-            //     $data=[
-            //         "message" => "Succesful insert"
-            //     ]
-            // }
+            try {
+                $user = new User(DB::instance());
+                $code = $user->editUser("UPDATE users SET first_name=?,last_name=?,username=?,email=?,pass=? WHERE id=?", [$first_name, $last_name, $username, $email, $pass, $idEmployee]);
+                \http_response_code(204);
+
+            } catch (PDOException $ex) {
+                http_response_code(500);
+                echo json_encode([
+                    "message" => $ex->getMessage(),
+                ]);
+            }
 
         }
-        http_response_code($code);
-        echo json_encode($data);
+
     }
     public function uploadPicture($request)
     {
@@ -245,7 +259,6 @@ class UserController
 
             imagecopyresampled($newPicture, $existingPicture, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-            // UPLOAD NOVE SLIKE
             $picName = time() . $file_name;
             $pathNewPicture = 'assets/new_' . $picName;
 
@@ -279,14 +292,15 @@ class UserController
                     }
 
                 } catch (PDOException $ex) {
-                    $code = 500;
+                    http_response_code(500);
+                    echo json_encode([
+                        "message" => $ex->getMessage(),
+                    ]);
                 }
             }
 
-            // brisanje iz memorije
             imagedestroy($existingPicture);
             imagedestroy($newPicture);
-            //  move_uploaded_file($_FILES["file"]["tmp_name"], $location);
 
         }
     }

@@ -17,6 +17,7 @@ if (isset($_GET['page'])) {
             $user = new UserController();
             $user->login($_POST);
             break;
+
     }
 }
 
@@ -27,10 +28,6 @@ if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
 
     $arr = explode(" ", $authHeader);
-
-    /*echo json_encode(array(
-    "message" => "sd" .$arr[1]
-    ));*/
 
     $jwt = $arr[1];
 
@@ -64,10 +61,7 @@ if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
                         $user = new UserController();
                         $user->editUser($_POST);
                         break;
-                    case 'send_message':
-                        $message = new MessageController();
-                        $message->sendMessage($_POST);
-                        break;
+
                     case 'upload_photo':
                         $user = new UserController();
                         $user->uploadPicture($_POST);
@@ -75,6 +69,14 @@ if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
                     case 'get_team':
                         $boss = new BossController();
                         $boss->getTeam($_GET);
+                        break;
+                    case 'send_message':
+                        $message = new MessageController();
+                        $message->sendMessage($_POST);
+                        break;
+                    case 'add_task':
+                        $task = new TasksController();
+                        $task->addTask($_POST);
                         break;
                 }
             }

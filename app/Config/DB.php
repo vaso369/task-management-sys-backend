@@ -19,6 +19,7 @@ class DB
     {
         if (self::$db === null) {
             self::$db = new DB();
+            //    accessList();
         }
         return self::$db;
     }
@@ -38,13 +39,9 @@ class DB
     public function executeOneRow(string $query, array $params)
     {
         $prepare = $this->conn->prepare($query);
-        try {
-            $code = $prepare->execute($params) ? 200 : 500;
-        } catch (PDOException $e) {
-            $code = 409;
-            // catchErrors("register.php ->".$e->getMessage());
-        }
-        return $code;
+
+        return $prepare->execute($params);
+
     }
     public function executeSelectOneRow(string $query, array $params)
     {
@@ -57,5 +54,21 @@ class DB
         $prepare = $this->conn->prepare($query);
         $prepare->execute($params);
         return $prepare->fetchAll();
+    }
+    public function accessList()
+    {
+        $file = fopen(BASE_URL . "data/log.txt", "a");
+
+        $string = basename($_SERVER['REQUEST_URI']) . "\t" . date("d.m.Y H:i:s") . "\t" . $_SERVER['REMOTE_ADDR'] . "\n";
+
+        fwrite($file, $string);
+        fclose($file);
+    }
+    public function catchErrors($error)
+    {
+        @$open = fopen(ERROR_FILE, "a");
+        $unos = $error . "\t" . date('d-m-Y H:i:s') . "\n";
+        @fwrite($open, $unos);
+        @fclose($open);
     }
 }

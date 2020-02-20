@@ -1,27 +1,39 @@
 <?php
 namespace App\Controllers\Messages;
-use App\Models\Messages\Message;
-use App\Config\DB;
 
-class MessageController {   
+use App\Config\DB;
+use App\Models\Messages\Message;
+use PDOException;
+
+class MessageController
+{
     private $model;
-    public function __construct(){
-        $this->model = new Message(DB::instance());     
+    public function __construct()
+    {
+        $this->model = new Message(DB::instance());
     }
-    public function sendMessage($request){
+    public function sendMessage($request)
+    {
         header("Content-type:application/json");
-        $idEmployee=$request['idEmployee'];
-        $idBoss=$request['idBoss'];
-        $messageValue=$request['message'];
-        $data=null;
+        $idEmployee = $request['idEmployee'];
+        $idBoss = $request['idBoss'];
+        $messageValue = $request['message'];
+        $data = null;
         $message = new Message(DB::instance());
-        $code=$message->sendMessage("INSERT INTO messages VALUES (NULL,?,?,?)",[$idEmployee,$idBoss,$messageValue]);
-        if($code===200){
-            http_response_code($code);
+        try {
+            $isInserted = $message->sendMessage("INSERT INTO messages VALUES (NULL,?,?,?)", [$idEmployee, $idBoss, $messageValue]);
+            if ($isInserted) {
+                http_response_code(201);
+                echo json_encode([
+                    "message" => "Message successfuly sent!",
+                ]);
+            }
+        } catch (PDOException $ex) {
+            \http_response_code(500);
             echo json_encode([
-                "message"=>"Message successfuly sent!"
+                "message" => $ex->getMessage(),
             ]);
         }
-        
+
     }
 }
