@@ -11,7 +11,6 @@ class DB
 
     private function __construct()
     {
-        // echo "DB klasa napravljena!";
         $this->connect();
     }
 
@@ -19,14 +18,14 @@ class DB
     {
         if (self::$db === null) {
             self::$db = new DB();
-            //    accessList();
+                accessList();
         }
         return self::$db;
     }
 
     private function connect()
     {
-        $this->conn = new \PDO("mysql:host=localhost;dbname=task-management;charset=utf8", "root", "");
+        $this->conn = new \PDO("mysql:host=.SERVER.;dbname=.DATABASE.;charset=utf8", ".USERNAME.", ".PASS.");
         $this->conn->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_OBJ);
         $this->conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
     }
